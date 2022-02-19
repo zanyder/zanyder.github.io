@@ -1,8 +1,35 @@
 // IIFE -- Immediately Invoked Function Expression
 // AKA -- Anonymous Self-Executing Function
 (function () {
+  function AjaxRequest(method, url, callback) {
+    //step 1 - instantiate XHR object
+    let XHR = new XMLHttpRequest();
+
+    // step 2 - create an event listener
+
+    XHR.addEventListener("readystatechange", () => {
+      if ((XHR.readyState === 4) & (XHR.status === 200)) {
+        callback(XHR.responseText);
+      }
+    });
+
+    //Step 3 - open a connection to the server
+
+    XHR.open(method, url);
+
+    // step 4 - send the request to the server
+
+    XHR.send();
+  }
+  function LoadHeader(data) {
+    $("header").html(data);
+    $(`li>a:contains(${document.title})`).addClass("active");
+    CheckLogin();
+  }
+
   function DisplayHome() {
     console.log("Home Page");
+    AjaxRequest("GET", "header.html", LoadHeader);
 
     $("#AboutUsButton").on("click", function () {
       location.href = "about.html";
@@ -27,7 +54,6 @@
   }
   function DisplayContacts() {
     console.log("Contacts Page");
-
     ContactFormValidation();
 
     let sendButton = document.getElementById("sendButton");
@@ -74,15 +100,16 @@
   }
   function DisplayContactListPage() {
     console.log("Contact List Page");
+    
     if (localStorage.length > 0) {
       let contactList = document.getElementById("contactList"); // The tbody from contact-list.html
 
       let data = ""; // data container -> add deserialized data from localStorage
 
       let keys = Object.keys(localStorage); // returns a string array of keys from localStorage
-
+  
       let index = 1; //counter for keys
-
+  
       // for every key from Keys array, loop
       for (const key of keys) {
         let contactData = localStorage.getItem(key); // get localStorage data value related to key
@@ -218,25 +245,90 @@
         $("#submit").hide();
         messageArea.addClass("alert alert-danger");
         messageArea.text(error_message).show();
-
       } //Everything is Ok
       else {
         messageArea.removeAttr("class").hide(); // removes the attribute named class
       }
     });
-
-    function DisplayLoginPage()
-    {
-      console.log("Login Page");
-    }
-    function DisplayRegister()
-    {
-      console.log("Register Page");
-    }
+  }
+  function DisplayRegister() {
+    console.log("Register Page");
   }
 
+  function DisplayLogin() 
+  {
+    console.log("Login Page");
+    let messageArea = $("#messageArea").hide();
+
+    $("#loginButton").on("click", () => {
+      let success = false;
+      // create an empty user object
+      let newUser = new core.User();
+
+      // user a jquery shortcut to load the users.json file
+      $.get("./Data/users.json", (data) => {
+        //for every user in the users.json file, loop
+        for (const user of data.users) {
+          // check if the username and password entered matched with user
+          if (
+            username.value == user.Username &&
+            password.value == user.Password
+          ) {
+            //get the user data from the file and assign it to the empty user
+            newUser.fromJSON(user);
+            success = true;
+            break;
+          } else {
+          }
+        }
+        if (success) {
+          //if username and password matches => success, perform the login sequence
+          // add user to session storage
+
+          sessionStorage.setItem("user", newUser.serialize());
+
+          //hide any errors
+          $("#messageArea").removeAttr("class").hide();
+
+          location.href = "contact-list.html";
+        } else {
+          // display an error message
+          $("#username").trigger("focus").trigger("select");
+          messageArea
+            .addClass("alert alert-danger")
+            .text("Error: Invalid login information.")
+            .show();
+        }
+
+        $("#cancelButton").on("click", () => {
+          // clear the login form
+          document.forms[0].reset();
+          location.href = "index.html";
+        });
+      });
+    });
+  }
+
+  function CheckLogin()
+  {
+    if(sessionStorage.getItem("user"))
+    {
+      // swap out login link for logout link
+      $("#login").html(
+        `<a id="logout" class="nav-link" href="#"><i class="fas fa-sign-out-alt"></i> Logout</a>`
+      )
+
+      $("#logout").on("click", ()=>{
+        sessionStorage.clear();     // clear the session storage
+        location.href = "index.html"; //redirect back to index page
+      })
+      return true;
+    }
+  }
   function Start() {
     console.log("App Started");
+    AjaxRequest("GET", "header.html", LoadHeader);
+    
 
     switch (document.title) {
       case "Home":
@@ -255,8 +347,8 @@
         DisplayContacts();
         break;
       case "Contact-List":
-        DisplayContactListPage();
-        break;
+          DisplayContactListPage();
+          break;
       case "Edit":
         DisplayEditPage();
         break;
